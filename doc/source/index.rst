@@ -4,6 +4,8 @@
 .. toctree::
    :maxdepth: 2
 
+   jobs
+
 Indices and tables
 ==================
 
