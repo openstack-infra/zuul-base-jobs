@@ -1,0 +1,9 @@
+Code-Review+2: Ian Wienand <iwienand@redhat.com>
+Code-Review+2: Andreas Jaeger <jaegerandi@gmail.com>
+Workflow+1: Andreas Jaeger <jaegerandi@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Tue, 08 May 2018 05:02:16 +0000
+Reviewed-on: https://review.openstack.org/566731
+Project: openstack-infra/zuul-base-jobs
+Branch: refs/heads/master
