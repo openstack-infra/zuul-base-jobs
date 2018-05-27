@@ -26,3 +26,15 @@
     roles:
       - zuul: openstack-infra/zuul-jobs
     timeout: 1800
+
+- job:
+    name: openshift-base
+    parent: null
+    description: |
+      A base job that build a container image using project future state.
+    pre-run: playbooks/openshift/pre.yaml
+    roles:
+      - zuul: openstack-infra/zuul-jobs
+    timeout: 1800
+    vars:
+      base_image: "python:3.6"

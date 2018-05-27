@@ -1,0 +1,5 @@
+---
+- hosts: localhost
+  tasks:
+    - include_tasks: prepare-namespace.yaml
+    - include_tasks: build-project.yaml
