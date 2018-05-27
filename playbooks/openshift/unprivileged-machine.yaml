@@ -1,0 +1,9 @@
+---
+- hosts: localhost
+  tasks:
+    - name: Create src directory
+      command: "oc exec {{ zuul_resources['pod'].pod }} mkdir src"
+
+    - name: Copy src repos to the pod
+      command: "oc rsync -q --progress=false {{ zuul.executor.src_root }}/ {{ zuul_resources['pod'].pod }}:src/"
+      no_log: true
