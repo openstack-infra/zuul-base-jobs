@@ -1,0 +1,281 @@
+---
+- hosts: localhost
+  tasks:
+    #########################
+    # Prepare the namespace #
+    #########################
+    # Note: this can probably be simplified by running a ready to use http server.
+    # In this PoC, the http server is constructed using the openshift/httpd-ex template
+    - name: create staging-http ImageStream
+      openshift_raw:
+        state: present
+        namespace: "{{ zuul.resources['openshift-project'].namespace }}"
+        definition:
+          apiVersion: v1
+          kind: ImageStream
+          metadata:
+            labels:
+              app: staging-http-server
+            name: staging-http-server
+          spec:
+            lookupPolicy:
+              local: false
+
+    - name: create staging-http BuildConfig
+      openshift_raw:
+        state: present
+        namespace: "{{ zuul.resources['openshift-project'].namespace }}"
+        definition:
+          apiVersion: v1
+          kind: BuildConfig
+          metadata:
+            labels:
+              app: staging-http-server
+            name: staging-http-server
+          spec:
+            output:
+              to:
+                kind: ImageStreamTag
+                name: 'staging-http-server:latest'
+            postCommit: {}
+            resources: {}
+            runPolicy: Serial
+            source:
+              git:
+                ref: master
+                uri: 'https://github.com/openshift/httpd-ex.git'
+              type: Git
+            strategy:
+              sourceStrategy:
+                from:
+                  kind: ImageStreamTag
+                  name: 'httpd:2.4'
+                  namespace: openshift
+              type: Source
+            triggers:
+              - type: ImageChange
+              - type: ConfigChange
+          status:
+            lastVersion: 1
+
+    - name: create staging-http DeploymentConfig
+      openshift_raw:
+        state: present
+        namespace: "{{ zuul.resources['openshift-project'].namespace }}"
+        definition:
+          apiVersion: v1
+          kind: DeploymentConfig
+          metadata:
+            generation: 2
+            labels:
+              app: staging-http-server
+            name: staging-http-server
+          spec:
+            replicas: 1
+            selector:
+              deploymentconfig: staging-http-server
+            strategy:
+              resources: {}
+              type: Rolling
+            template:
+              metadata:
+                labels:
+                  app: staging-http-server
+                  deploymentconfig: staging-http-server
+              spec:
+                containers:
+                  - image: "172.30.1.1:5000/{{ zuul.resources['openshift-project'].namespace }}/staging-http-server"
+                    # imagePullPolicy: Always
+                    name: staging-http-server
+                    ports:
+                      - containerPort: 8080
+                        protocol: TCP
+                      - containerPort: 8443
+                        protocol: TCP
+                    resources: {}
+                dnsPolicy: ClusterFirst
+                restartPolicy: Always
+                schedulerName: default-scheduler
+                securityContext: {}
+                terminationGracePeriodSeconds: 30
+            test: false
+
+    - name: create staging-http Service spec
+      openshift_raw:
+        state: present
+        namespace: "{{ zuul.resources['openshift-project'].namespace }}"
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            labels:
+              app: staging-http-server
+            name: staging-http-server
+          spec:
+            ports:
+              - name: 8080-tcp
+                port: 8080
+                protocol: TCP
+                targetPort: 8080
+            selector:
+              deploymentconfig: staging-http-server
+            sessionAffinity: None
+            type: ClusterIP
+          status:
+            loadBalancer: {}
+
+    - name: get staging-http-server pod name
+      command: oc get pods --field-selector=status.phase=Running -o "jsonpath={.items[?(@.metadata.labels.app=='staging-http-server')].metadata.name}"
+      register: _zm_name
+      retries: 600
+      delay: 1
+      until: "'staging-http' in _zm_name.stdout"
+
+    - name: register staging-http-server pod name
+      set_fact:
+        zm_name: "{{ _zm_name.stdout }}"
+
+    ###########################
+    # Build the project image #
+    ###########################
+    - name: prepare dumb bare clone of future state
+      git:
+        repo: "{{ zuul.executor.work_root }}/{{ zuul.project.src_dir }}"
+        dest: "{{ zuul.executor.work_root }}/{{ zuul.project.src_dir }}.git"
+        bare: yes
+      tags:
+        # We don't specify git version to re-use executor state
+        - skip_ansible_lint
+
+    - name: update server info for dumb http transport
+      command: git update-server-info
+      args:
+        chdir: "{{ zuul.executor.work_root }}/{{ zuul.project.src_dir }}.git"
+      tags:
+        # Git module doesn't support update-server-info command
+        - skip_ansible_lint
+
+    - name: create project dir on http server
+      command: "oc exec {{ zm_name }} -- mkdir -p {{ zuul.project.src_dir }}.git"
+
+    - name: copy project to http server
+      command: "oc rsync {{ zuul.executor.work_root }}/{{ zuul.project.src_dir }}.git/ {{ zm_name }}:/opt/app-root/src/{{ zuul.project.src_dir }}.git/"
+
+    - name: create project ImageStream spec
+      openshift_raw:
+        state: present
+        namespace: "{{ zuul.resources['openshift-project'].namespace }}"
+        definition:
+          apiVersion: v1
+          kind: ImageStream
+          metadata:
+            generation: 1
+            labels:
+              app: "{{ zuul.project.short_name }}"
+            name: "{{ zuul.project.short_name }}"
+          spec:
+            lookupPolicy:
+              local: false
+
+    - name: create project BuildConfig spec
+      openshift_raw:
+        state: present
+        namespace: "{{ zuul.resources['openshift-project'].namespace }}"
+        definition:
+          apiVersion: v1
+          kind: BuildConfig
+          metadata:
+            labels:
+              app: "{{ zuul.project.short_name }}"
+            name: "{{ zuul.project.short_name }}"
+          spec:
+            output:
+              to:
+                kind: ImageStreamTag
+                name: '{{ zuul.project.short_name }}:latest'
+            postCommit: {}
+            resources: {}
+            runPolicy: Serial
+            source:
+              git:
+                ref: master
+                uri: 'http://staging-http-server:8080/{{ zuul.project.src_dir }}.git'
+              type: Git
+            strategy:
+              sourceStrategy:
+                from:
+                  kind: ImageStreamTag
+                  name: '{{ base_image }}'
+                  namespace: openshift
+              type: Source
+            triggers:
+              - type: ImageChange
+              - type: ConfigChange
+          status:
+            lastVersion: 1
+
+    - name: wait for project image built
+      command: oc get builds -o "jsonpath={.items[?(@.metadata.labels.buildconfig!='staging-http-server')].status.phase}"
+      register: _project_build
+      retries: 600
+      delay: 1
+      until: "'Complete' in _project_build.stdout"
+
+    ######################
+    # Deploy the project #
+    ######################
+    - name: start the project
+      openshift_raw:
+        state: present
+        namespace: "{{ zuul.resources['openshift-project'].namespace }}"
+        definition:
+          apiVersion: v1
+          kind: DeploymentConfig
+          metadata:
+            generation: 2
+            labels:
+              app: "{{ zuul.project.short_name }}"
+            name: "{{ zuul.project.short_name }}"
+          spec:
+            replicas: 1
+            selector:
+              deploymentconfig: "{{ zuul.project.short_name }}"
+            strategy:
+              resources: {}
+              type: Rolling
+            template:
+              metadata:
+                labels:
+                  app: "{{ zuul.project.short_name }}"
+                  deploymentconfig: "{{ zuul.project.short_name }}"
+              spec:
+                containers:
+                  - image: "172.30.1.1:5000/{{ zuul.resources['openshift-project'].namespace }}/{{ zuul.project.short_name }}"
+                    name: "{{ zuul.project.short_name }}"
+                    command: [ "/bin/bash", "-c", "--" ]
+                    args: [ "while true; do sleep 30; done;" ]
+                    ports:
+                      - containerPort: 8080
+                        protocol: TCP
+                      - containerPort: 8443
+                        protocol: TCP
+                    resources: {}
+                dnsPolicy: ClusterFirst
+                restartPolicy: Always
+                schedulerName: default-scheduler
+                securityContext: {}
+                terminationGracePeriodSeconds: 30
+            test: false
+
+    - name: get project pod name
+      command: oc get pods --field-selector=status.phase=Running -o "jsonpath={.items[?(@.metadata.labels.app=='{{ zuul.project.short_name }}')].metadata.name}"
+      register: _pod_name
+      retries: 600
+      delay: 1
+      until: "zuul.project.short_name in _pod_name.stdout"
+
+    - name: add pod to the job inventory
+      zuul_return:
+        data:
+          zuul:
+            inventory: '{"{{ zuul.project.short_name }}": {"ansible_connection": "kubectl", "ansible_host": "{{ _pod_name.stdout }}"}}'

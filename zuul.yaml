@@ -26,3 +26,36 @@
     roles:
       - zuul: git.zuul-ci.org/zuul-jobs
     timeout: 1800
+
+- job:
+    name: base-openshift-container-native
+    parent: null
+    description: |
+      A base job that build and deploy a container image using the
+      project future state.
+    pre-run: playbooks/openshift/pre.yaml
+    roles:
+      - zuul: openstack-infra/zuul-jobs
+    timeout: 1800
+    nodeset:
+      nodes:
+        - name: project
+          label: openshift-project
+    vars:
+      # Base image to use for BuildConfig
+      base_image: "python:3.6"
+
+- job:
+    name: base-openshift-container-as-unprivileged-machine
+    parent: null
+    description: |
+      A base job to spawn a vanilla container and copy the project
+      future state.
+    pre-run: playbooks/openshift/unprivileged-machine.yaml
+    roles:
+      - zuul: openstack-infra/zuul-jobs
+    timeout: 1800
+    nodeset:
+      nodes:
+        - name: pod
+          label: openshift-pod
