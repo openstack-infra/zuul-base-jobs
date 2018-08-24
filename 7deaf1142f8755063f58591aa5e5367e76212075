@@ -1,0 +1,9 @@
+Code-Review+2: Andreas Jaeger <jaegerandi@gmail.com>
+Code-Review+2: James E. Blair <corvus@inaugust.com>
+Workflow+1: James E. Blair <corvus@inaugust.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Fri, 24 Aug 2018 16:23:22 +0000
+Reviewed-on: https://review.openstack.org/586949
+Project: openstack-infra/zuul-base-jobs
+Branch: refs/heads/master
