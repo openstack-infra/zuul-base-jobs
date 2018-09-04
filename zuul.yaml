@@ -12,7 +12,7 @@
     pre-run: playbooks/base/pre.yaml
     post-run: playbooks/base/post-ssh.yaml
     roles:
-      - zuul: openstack-infra/zuul-jobs
+      - zuul: https://git.zuul-ci.org/zuul-jobs
     timeout: 1800
 
 - job:
@@ -24,5 +24,5 @@
     pre-run: playbooks/base-test/pre.yaml
     post-run: playbooks/base-test/post-ssh.yaml
     roles:
-      - zuul: openstack-infra/zuul-jobs
+      - zuul: https://git.zuul-ci.org/zuul-jobs
     timeout: 1800
