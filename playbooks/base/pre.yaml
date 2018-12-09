@@ -2,3 +2,9 @@
   roles:
     - add-build-sshkey
     - prepare-workspace
+    # This role ensures basic connectivity and produces some
+    # helpful information in zuul-info/
+    - validate-host
+    # This roles copies the ansible inventory to zuul-info/
+    # for debugging purposes
+    - log-inventory
