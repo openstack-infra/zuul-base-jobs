@@ -1,0 +1,11 @@
+Code-Review+2: Jeremy Stanley <fungi@yuggoth.org>
+Code-Review+2: Clint 'SpamapS' Byrum <clint@fewbar.com>
+Code-Review+2: Tobias Henkel <tobias.henkel@bmw.de>
+Code-Review+2: Andreas Jaeger <jaegerandi@gmail.com>
+Workflow+1: Andreas Jaeger <jaegerandi@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Sun, 09 Dec 2018 18:41:19 +0000
+Reviewed-on: https://review.openstack.org/576802
+Project: openstack-infra/zuul-base-jobs
+Branch: refs/heads/master
