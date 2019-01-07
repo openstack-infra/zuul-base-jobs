@@ -1,3 +1,7 @@
 - hosts: all
   roles:
+    - fetch-output
+
+- hosts: all
+  roles:
     - remove-build-sshkey
