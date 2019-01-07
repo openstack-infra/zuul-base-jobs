@@ -10,7 +10,7 @@
 
       It also sets a default timeout value (which may be overidden).
     pre-run: playbooks/base/pre.yaml
-    post-run: playbooks/base/post-ssh.yaml
+    post-run: playbooks/base/post.yaml
     roles:
       - zuul: git.zuul-ci.org/zuul-jobs
     timeout: 1800
@@ -22,7 +22,7 @@
       A job to test changes to the base job without disturbing the
       main job in production.  Not for general use.
     pre-run: playbooks/base-test/pre.yaml
-    post-run: playbooks/base-test/post-ssh.yaml
+    post-run: playbooks/base-test/post.yaml
     roles:
       - zuul: git.zuul-ci.org/zuul-jobs
     timeout: 1800
