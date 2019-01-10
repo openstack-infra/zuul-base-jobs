@@ -1,0 +1,9 @@
+Code-Review+2: Tobias Henkel <tobias.henkel@bmw.de>
+Code-Review+2: Andreas Jaeger <jaegerandi@gmail.com>
+Workflow+1: Andreas Jaeger <jaegerandi@gmail.com>
+Verified+2: Zuul
+Submitted-by: Zuul
+Submitted-at: Thu, 10 Jan 2019 20:52:34 +0000
+Reviewed-on: https://review.openstack.org/628976
+Project: openstack-infra/zuul-base-jobs
+Branch: refs/heads/master
